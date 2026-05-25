@@ -5,12 +5,11 @@
 
 class Skrytka {
 private:
-    int  numer;
+    int numer;
     char rozmiar;
     bool Zajeta;
     bool Zamknieta;
-
-    std::optional<Paczka> paczka; // nullopt gdy skrytka pusta
+    std::optional<Paczka> paczka;
 
 public:
     Skrytka(int n, char r);
@@ -21,11 +20,10 @@ public:
     void wkladaniePaczki(const Paczka& p);
     void wyjmowaniePaczki();
 
-    bool czyZajeta()     const;
-    bool czyZamknieta()  const;
+    bool czyZajeta() const;
+    bool czyZamknieta() const;
     char getRozmiarSkrytki() const;
-    int  getNumer()      const;
+    int  getNumer() const;
 
-    // potrzebne Paczkomatowi przy weryfikacji odbioru
     const std::optional<Paczka>& getPaczka() const;
 };

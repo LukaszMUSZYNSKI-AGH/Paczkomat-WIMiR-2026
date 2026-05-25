@@ -1,92 +1,14 @@
 #include "Paczkomat.h"
-#include <iostream>
+#include <cstdlib>   // rand
+#include <ctime>
 
 Paczkomat::Paczkomat(std::string a, std::string num, std::vector<Skrytka> s)
     : adres(a), numer(num), skrytki(s)
-{}
-
-void Paczkomat::ListaSkrytek() const {
-    for (const Skrytka& x : skrytki) {
-        std::cout << "Numer: "  << x.getNumer()          << " | "
-                  << "Rozmiar: " << x.getRozmiarSkrytki() << " | "
-                  << (x.czyZajeta() ? "Zajeta" : "Wolna")
-                  << std::endl;
-    }
+{
+    srand((unsigned)time(nullptr));
 }
 
-void Paczkomat::odbior() {
-    int         kod;
-    std::string tel;
-
-    std::cout << "Nr telefonu: ";
-    std::cin  >> tel;
-    std::cout << "Kod odbioru: ";
-    std::cin  >> kod;
-
-    for (Skrytka& x : skrytki) {
-        // sprawdzamy czy skrytka jest zajeta i ma paczke
-        if (!x.czyZajeta()) continue;
-
-        const auto& paczka = x.getPaczka();
-
-        // has_value() sprawdza czy optional nie jest pusty
-        if (paczka.has_value() &&
-            paczka->getKodPaczki()   == kod &&
-            paczka->getTelOdbiorcy() == tel)
-        {
-            x.otworz();
-            std::cout << "Skrytka " << x.getNumer() << " otwarta. Prosze zabrac paczke." << std::endl;
-            std::cout << "Nacisnij ENTER gdy zabierzesz paczke..." << std::endl;
-            std::cin.ignore();
-            std::cin.get();
-
-            x.wyjmowaniePaczki();
-            x.zamknij();
-            std::cout << "Dziekujemy, do widzenia!" << std::endl;
-            return;
-        }
-    }
-
-    std::cout << "Nie znaleziono paczki o podanym kodzie i numerze telefonu." << std::endl;
-}
-
-void Paczkomat::nadanie() {
-    int         kod;
-    std::string tel;
-    char        rozmiar;
-    bool        wlozona = false;
-
-    std::cout << "Podaj nr telefonu: ";
-    std::cin  >> tel;
-    std::cout << "Podaj kod odbioru: ";
-    std::cin  >> kod;
-    std::cout << "Podaj rozmiar paczki (A/B/C): ";
-    std::cin  >> rozmiar;
-
-    Paczka p(kod, tel, rozmiar);
-
-    for (Skrytka& x : skrytki) {
-        if (x.getRozmiarSkrytki() == rozmiar && !x.czyZajeta()) {
-            x.otworz();
-            std::cout << "Skrytka " << x.getNumer() << " otwarta." << std::endl;
-            std::cout << "Wloz paczke i zamknij skrytke." << std::endl;
-            std::cout << "Nacisnij ENTER gdy zamkniesz..." << std::endl;
-            std::cin.ignore();
-            std::cin.get();
-
-            x.wkladaniePaczki(p);
-            x.zamknij();
-            std::cout << "Paczka przyjeta!" << std::endl;
-            wlozona = true;
-            break;
-        }
-    }
-
-    if (!wlozona) {
-        std::cout << "Brak wolnych skrytek rozmiaru " << rozmiar << std::endl;
-    }
-}
-
+// ── Odbiór (klient podaje tel + kod) ──────────────────────────────────────
 bool Paczkomat::odbiorGUI(const std::string& tel, int kod) {
     for (Skrytka& x : skrytki) {
         if (!x.czyZajeta()) continue;
@@ -102,11 +24,81 @@ bool Paczkomat::odbiorGUI(const std::string& tel, int kod) {
     return false;
 }
 
+// ── Nadanie klienckie (klient podaje tel + własny kod) ────────────────────
+// Sprawdza unikalność tel i kodu przed włożeniem.
 bool Paczkomat::nadanieGUI(const std::string& tel, int kod, char rozmiar) {
+    // walidacja duplikatów
+    for (const Skrytka& x : skrytki) {
+        if (!x.czyZajeta()) continue;
+        const auto& p = x.getPaczka();
+        if (!p.has_value()) continue;
+        if (p->getTelOdbiorcy() == tel) return false;   // tel zajęty
+        if (p->getKodPaczki()   == kod) return false;   // kod zajęty
+    }
+
+    // szukamy skrytki — najpierw żądany rozmiar, potem większe
+    static const char kolejnosc[] = {'A','B','C'};
+    int start = 0;
+    for (int i = 0; i < 3; ++i) if (kolejnosc[i] == rozmiar) { start = i; break; }
+
+    for (int i = start; i < 3; ++i) {
+        for (Skrytka& x : skrytki) {
+            if (!x.czyZajeta() && x.getRozmiarSkrytki() == kolejnosc[i]) {
+                Paczka p(kod, tel, kolejnosc[i]);
+                x.wkladaniePaczki(p);
+                return true;
+            }
+        }
+    }
+    return false;   // brak miejsca
+}
+
+// ── Nadanie kurierskie (system generuje unikalny kod) ─────────────────────
+// Zwraca przydzielony kod (> 0) lub -1 gdy brak miejsca / tel już istnieje.
+int Paczkomat::nadanieKurierGUI(const std::string& tel, char rozmiar) {
+    // sprawdź czy tel już w systemie
+    for (const Skrytka& x : skrytki) {
+        if (!x.czyZajeta()) continue;
+        const auto& p = x.getPaczka();
+        if (p.has_value() && p->getTelOdbiorcy() == tel) return -1;
+    }
+
+    // generuj unikalny 4-cyfrowy kod
+    int kod = 0;
+    for (int attempt = 0; attempt < 1000; ++attempt) {
+        int kandydat = 1000 + rand() % 9000;  // 1000–9999
+        bool zajety = false;
+        for (const Skrytka& x : skrytki) {
+            if (!x.czyZajeta()) continue;
+            const auto& p = x.getPaczka();
+            if (p.has_value() && p->getKodPaczki() == kandydat) { zajety = true; break; }
+        }
+        if (!zajety) { kod = kandydat; break; }
+    }
+    if (kod == 0) return -1;  // nie udało się wygenerować (ekstremalny przypadek)
+
+    // szukamy skrytki — najpierw żądany rozmiar, potem większe
+    static const char kolejnosc[] = {'A','B','C'};
+    int start = 0;
+    for (int i = 0; i < 3; ++i) if (kolejnosc[i] == rozmiar) { start = i; break; }
+
+    for (int i = start; i < 3; ++i) {
+        for (Skrytka& x : skrytki) {
+            if (!x.czyZajeta() && x.getRozmiarSkrytki() == kolejnosc[i]) {
+                Paczka p(kod, tel, kolejnosc[i]);
+                x.wkladaniePaczki(p);
+                return kod;
+            }
+        }
+    }
+    return -1;  // brak miejsca
+}
+
+// ── Reset skrytki (serwisant) ─────────────────────────────────────────────
+bool Paczkomat::resetSkrytki(int numerSkrytki) {
     for (Skrytka& x : skrytki) {
-        if (x.getRozmiarSkrytki() == rozmiar && !x.czyZajeta()) {
-            Paczka p(kod, tel, rozmiar);
-            x.wkladaniePaczki(p);
+        if (x.getNumer() == numerSkrytki && x.czyZajeta()) {
+            x.wyjmowaniePaczki();
             return true;
         }
     }
