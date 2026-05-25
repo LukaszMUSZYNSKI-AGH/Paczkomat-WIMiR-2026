@@ -1,0 +1,38 @@
+# depslib dependency file v1.0
+1779711790 source:c:\users\pc\desktop\sprawozdania & projekty\semestr 6\programowanie obiektowe\claudepliki\imposter\paczka.cpp
+	"Paczka.h"
+
+1779739557 c:\users\pc\desktop\sprawozdania & projekty\semestr 6\programowanie obiektowe\claudepliki\imposter\paczka.h
+	<string>
+
+1779711824 source:c:\users\pc\desktop\sprawozdania & projekty\semestr 6\programowanie obiektowe\claudepliki\imposter\paczkomat.cpp
+	"Paczkomat.h"
+	<cstdlib>
+	<ctime>
+
+1779739499 c:\users\pc\desktop\sprawozdania & projekty\semestr 6\programowanie obiektowe\claudepliki\imposter\paczkomat.h
+	<string>
+	<vector>
+	"Skrytka.h"
+	"Paczka.h"
+
+1779739530 c:\users\pc\desktop\sprawozdania & projekty\semestr 6\programowanie obiektowe\claudepliki\imposter\skrytka.h
+	<string>
+	<optional>
+	"Paczka.h"
+
+1779711790 source:c:\users\pc\desktop\sprawozdania & projekty\semestr 6\programowanie obiektowe\claudepliki\imposter\skrytka.cpp
+	"Skrytka.h"
+	"Paczka.h"
+	<iostream>
+
+1779742288 source:c:\users\pc\desktop\sprawozdania & projekty\semestr 6\programowanie obiektowe\claudepliki\imposter\main_gui.cpp
+	<windows.h>
+	<commctrl.h>
+	<string>
+	<vector>
+	<cstdlib>
+	"Paczkomat.h"
+	"Skrytka.h"
+	"Paczka.h"
+
